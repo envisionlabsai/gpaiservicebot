@@ -3,87 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GrowthPros AI Chatbot</title>
+    <title>GrowthPros AI Chat</title>
     <style>
         body {
             font-family: 'Poppins', sans-serif;
-            background-color: #081B46;
-            color: white;
+            background-color: #0B0D24;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
         }
-        .chat-container {
-            width: 100%;
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #081B46;
-            border-radius: 8px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-        }
-        .chat-header {
-            background-color: #0065FF;
-            color: white;
+        
+        #header {
+            background-color: #007bff;
             padding: 10px;
-            border-radius: 8px 8px 0 0;
             text-align: center;
-        }
-        .chat-body {
-            height: 400px;
-            overflow-y: scroll;
-            padding: 10px;
-            background-color: #FFFFFF;
-            color: black;
-            border-radius: 0 0 8px 8px;
-            position: relative;
-        }
-        .chat-bubble {
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 10px;
-            width: fit-content;
-        }
-        .bot-bubble {
-            background-color: #f0f0f0;
-        }
-        .user-bubble {
-            background-color: #0065FF;
             color: white;
-            margin-left: auto;
+            font-size: 18px;
+            font-weight: bold;
         }
-        .chat-input-container {
+
+        #chat-container {
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+        }
+
+        #chat-window {
+            flex-grow: 1;
+            background-color: #0B0D24;
+            padding: 10px;
+            overflow-y: scroll;
+            scrollbar-width: thin;
+        }
+
+        #chat-window::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #chat-window::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #chat-window::-webkit-scrollbar-thumb {
+            background-image: url('scroll.png');
+            background-repeat: no-repeat;
+            background-size: contain;
+            border-radius: 50px;
+        }
+
+        .chat-bubble {
+            background-color: #F5F5F5;
+            color: black;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+
+        .chat-bubble.user {
+            background-color: #007bff;
+            color: white;
+            align-self: flex-end;
+        }
+
+        #message-box {
             display: flex;
             padding: 10px;
-            background-color: #081B46;
-            border-radius: 0 0 8px 8px;
+            background-color: #F5F5F5;
         }
-        .chat-input {
-            width: 100%;
+
+        #message-input {
+            flex-grow: 1;
             padding: 10px;
-            border-radius: 8px;
-            border: none;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
         }
-        .chat-send-button {
-            background-color: #0065FF;
-            border: none;
-            padding: 10px;
-            border-radius: 8px;
+
+        #send-button {
+            padding: 10px 20px;
+            background-color: #007bff;
             color: white;
-            margin-left: 5px;
+            border: none;
+            border-radius: 5px;
             cursor: pointer;
+            margin-left: 10px;
         }
-        /* Custom scrollbar */
-        .chat-body::-webkit-scrollbar {
-            width: 10px;
-        }
-        .chat-body::-webkit-scrollbar-thumb {
-            background-image: url('scroll.png'); /* Replace with your custom scroll button image */
-            background-color: #0065FF;
-            border-radius: 10px;
-        }
-        .chat-body::-webkit-scrollbar-track {
-            background-color: transparent;
+
+        #send-button:hover {
+            background-color: #0056b3;
         }
     </style>
 </head>
 <body>
-    <div class="chat-container">
-        <div class="chat-header">
-            Welcome to GrowthPros AI Chat
+    <div id="header">Welcome to GrowthPros AI Chat</div>
+    
+    <div id="chat-container">
+        <div id="chat-window"></div>
+        <div id="message-box">
+            <input type="text" id="message-input" placeholder="Type a message...">
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const chatWindow = document.getElementById('chat-window');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+
+        sendButton.addEventListener('click', () => {
+            const message = messageInput.value;
+            if (message.trim() !== '') {
+                addMessageToChat('user', message);
+                messageInput.value = '';
+
+                fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: message })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    addMessageToChat('bot', data.response);
+                });
+            }
+        });
+
+        function addMessageToChat(sender, message) {
+            const messageBubble = document.createElement('div');
+            messageBubble.classList.add('chat-bubble', sender);
+            messageBubble.textContent = message;
+            chatWindow.appendChild(messageBubble);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+    </script>
+</body>
+</html>
