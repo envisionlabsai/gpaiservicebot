@@ -22,25 +22,30 @@
             background-color: #0065FF;
             border-radius: 8px;
             overflow: hidden;
+            position: relative;
         }
         #messages {
             padding: 10px;
             height: 400px;
             overflow-y: auto;
             background-color: #081B46;
-            scrollbar-width: thin;
-            scrollbar-color: #0065FF transparent;
         }
-        /* Customize scrollbar */
+        /* Custom Scrollbar */
         #messages::-webkit-scrollbar {
-            width: 6px;
+            width: 10px;
         }
         #messages::-webkit-scrollbar-track {
-            background: transparent;
+            background: transparent; /* Make the track transparent */
         }
         #messages::-webkit-scrollbar-thumb {
-            background-color: #0065FF;
+            background: url('scroll.png') no-repeat center center;
+            background-size: cover; /* Ensure the image fits inside the thumb */
             border-radius: 10px;
+        }
+        /* Firefox Scrollbar */
+        #messages {
+            scrollbar-width: thin;
+            scrollbar-color: transparent url('scroll.png');
         }
         .message {
             margin: 10px 0;
