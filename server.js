@@ -1,113 +1,134 @@
-require('dotenv').config();
-const express = require('express');
-const axios = require('axios');
-const bodyParser = require('body-parser');
-const fs = require('fs');
-const path = require('path');
-
-const app = express();
-app.use(bodyParser.json());
-
-const PORT = process.env.PORT || 3000;
-
-// Load the knowledgebase
-let knowledgeBase = [];
-const knowledgeBaseFolder = path.join(__dirname, 'knowledgebase');
-
-// Load all JSON files in the knowledgebase folder
-fs.readdir(knowledgeBaseFolder, (err, files) => {
-    if (err) throw err;
-    files.forEach((file) => {
-        const filePath = path.join(knowledgeBaseFolder, file);
-        const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-        knowledgeBase = knowledgeBase.concat(data);
-    });
-});
-
-// Root Route: Informative message for users
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Chatbot API to handle messages
-app.post('/chat', async (req, res) => {
-    const { message } = req.body;
-
-    // Check for off-topic questions like weather
-    if (message.toLowerCase().includes('weather')) {
-        return res.json({
-            response: "I'm locked in the GrowthPros basement and can't check the weather outside, sorry! But let's get back to how AI can transform your business."
-        });
-    }
-
-    // Search the knowledgebase for a response
-    let responseFound = false;
-    for (let entry of knowledgeBase) {
-        if (message.toLowerCase().includes(entry.keyword.toLowerCase())) {
-            responseFound = true;
-            return res.json({ response: entry.response });
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrowthPros AI Chatbot</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #081B46;
+            color: white;
         }
-    }
+        .chat-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #081B46;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        .chat-header {
+            background-color: #0065FF;
+            color: white;
+            padding: 10px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+        .chat-body {
+            height: 400px;
+            overflow-y: scroll;
+            padding: 10px;
+            background-color: #FFFFFF;
+            color: black;
+            border-radius: 0 0 8px 8px;
+            position: relative;
+        }
+        .chat-bubble {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            width: fit-content;
+        }
+        .bot-bubble {
+            background-color: #f0f0f0;
+        }
+        .user-bubble {
+            background-color: #0065FF;
+            color: white;
+            margin-left: auto;
+        }
+        .chat-input-container {
+            display: flex;
+            padding: 10px;
+            background-color: #081B46;
+            border-radius: 0 0 8px 8px;
+        }
+        .chat-input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+        }
+        .chat-send-button {
+            background-color: #0065FF;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            color: white;
+            margin-left: 5px;
+            cursor: pointer;
+        }
+        /* Custom scrollbar */
+        .chat-body::-webkit-scrollbar {
+            width: 10px;
+        }
+        .chat-body::-webkit-scrollbar-thumb {
+            background-image: url('scroll.png'); /* Replace with your custom scroll button image */
+            background-color: #0065FF;
+            border-radius: 10px;
+        }
+        .chat-body::-webkit-scrollbar-track {
+            background-color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            Welcome to GrowthPros AI Chatbot
+        </div>
+        <div class="chat-body" id="chat-body">
+            <!-- Chat messages will be inserted here -->
+        </div>
+        <div class="chat-input-container">
+            <input type="text" class="chat-input" id="chat-input" placeholder="Type a message..." />
+            <button class="chat-send-button" id="send-btn">Send</button>
+        </div>
+    </div>
 
-    // Use GPT-3.5 for dynamic responses if not in the knowledgebase
-    if (!responseFound) {
-        try {
-            const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-                model: 'gpt-3.5-turbo',
-                messages: [{ role: 'user', content: message }],
-                max_tokens: 100,
-            }, {
+    <script>
+        const chatBody = document.getElementById('chat-body');
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        function appendMessage(content, isBot) {
+            const messageBubble = document.createElement('div');
+            messageBubble.classList.add('chat-bubble');
+            messageBubble.classList.add(isBot ? 'bot-bubble' : 'user-bubble');
+            messageBubble.textContent = content;
+            chatBody.appendChild(messageBubble);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        sendBtn.addEventListener('click', async () => {
+            const userMessage = chatInput.value;
+            if (!userMessage) return;
+
+            appendMessage(userMessage, false);
+            chatInput.value = '';
+
+            const response = await fetch('/chat', {
+                method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-                    'Content-Type': 'application/json',
-                }
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: userMessage })
             });
 
-            const botResponse = response.data.choices[0].message.content;
-            return res.json({ response: botResponse });
-        } catch (error) {
-            console.error('Error:', error);
-            return res.status(500).json({ response: 'Oops! Something went wrong. Let’s try that again.' });
-        }
-    }
-});
-
-// Calendly integration for scheduling meetings
-app.post('/schedule', async (req, res) => {
-    const { name, email, date } = req.body;
-
-    try {
-        const calendlyResponse = await axios.post(
-            'https://api.calendly.com/scheduled_events',
-            {
-                event_type: "https://calendly.com/event_types/175480232", // Use your event type URL
-                invitees: [{
-                    name: name,
-                    email: email,
-                }],
-                start_time: date,
-            },
-            {
-                headers: {
-                    'Authorization': `Bearer ${process.env.CALENDLY_API_KEY}`,
-                    'Content-Type': 'application/json',
-                }
-            }
-        );
-
-        res.json({
-            response: `Meeting scheduled successfully for ${name} on ${date}.`,
-            meeting_link: calendlyResponse.data.resource.uri
+            const data = await response.json();
+            appendMessage(data.response, true);
         });
-    } catch (error) {
-        console.error('Calendly API error:', error);
-        res.status(500).json({
-            response: 'Could not schedule the meeting. Please try again later.'
-        });
-    }
-});
-
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
-
+    </script>
+</body>
+</html>
