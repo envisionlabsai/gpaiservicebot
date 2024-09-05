@@ -2,15 +2,16 @@ require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const bodyParser = require('body-parser');
+const path = require('path');
 
 const app = express();
 app.use(bodyParser.json());
 
 const PORT = process.env.PORT || 3000;
 
-// Root Route: Informative message for users
+// Serve static HTML file for the chatbot interface
 app.get('/', (req, res) => {
-    res.send('Welcome to the GrowthPros AI Chatbot! Send a POST request to /chat to start a conversation.');
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Endpoint to handle chatbot messages
