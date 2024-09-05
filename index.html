@@ -28,6 +28,19 @@
             height: 400px;
             overflow-y: auto;
             background-color: #081B46;
+            scrollbar-width: thin;
+            scrollbar-color: #0065FF transparent;
+        }
+        /* Customize scrollbar */
+        #messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        #messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #messages::-webkit-scrollbar-thumb {
+            background-color: #0065FF;
+            border-radius: 10px;
         }
         .message {
             margin: 10px 0;
@@ -36,7 +49,7 @@
             max-width: 80%;
         }
         .user-message {
-            background-color: #4a90e2;
+            background-color: #0065FF;
             color: white;
             margin-left: auto;
             text-align: right;
