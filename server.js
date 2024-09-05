@@ -10,56 +10,72 @@ app.use(bodyParser.json());
 
 const PORT = process.env.PORT || 3000;
 
-// Load knowledgebase
-const knowledgeBase = {};
-for (let i = 1; i <= 5; i++) {
-    const filePath = path.join(__dirname, `knowledgebase/part${i}.json`);
-    const fileContent = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    Object.assign(knowledgeBase, fileContent);
-}
+// Serve static files from the 'public' folder (where your HTML file will be)
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Root Route: Informative message for users
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+// Load the knowledgebase
+let knowledgeBase = [];
+const knowledgeBaseFolder = path.join(__dirname, 'knowledgebase');
+
+// Load all JSON files in the knowledgebase folder
+fs.readdir(knowledgeBaseFolder, (err, files) => {
+    if (err) throw err;
+    files.forEach((file) => {
+        const filePath = path.join(knowledgeBaseFolder, file);
+        const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        knowledgeBase = knowledgeBase.concat(data);
+    });
 });
 
-// Endpoint to handle chatbot messages
+// Root Route: Serve the chatbot HTML
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Chatbot API to handle messages
 app.post('/chat', async (req, res) => {
     const { message } = req.body;
 
-    try {
-        const lowerCaseMessage = message.toLowerCase();
-        
-        // Search in knowledgebase
-        for (const key in knowledgeBase) {
-            if (lowerCaseMessage.includes(key.toLowerCase())) {
-                return res.json({ response: knowledgeBase[key] });
-            }
+    // Check for off-topic questions like weather
+    if (message.toLowerCase().includes('weather')) {
+        return res.json({
+            response: "I'm locked in the GrowthPros basement and can't check the weather outside, sorry! But let's get back to how AI can transform your business."
+        });
+    }
+
+    // Search the knowledgebase for a response
+    let responseFound = false;
+    for (let entry of knowledgeBase) {
+        if (message.toLowerCase().includes(entry.keyword.toLowerCase())) {
+            responseFound = true;
+            return res.json({ response: entry.response });
         }
+    }
 
-        // Call OpenAI API if not found in knowledgebase
-        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-            model: 'gpt-3.5-turbo',
-            messages: [{ role: 'user', content: message }],
-            max_tokens: 100,
-        }, {
-            headers: {
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-                'Content-Type': 'application/json',
-            }
-        });
+    // Use GPT-3.5 for dynamic responses if not in the knowledgebase
+    if (!responseFound) {
+        try {
+            const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+                model: 'gpt-3.5-turbo',
+                messages: [{ role: 'user', content: message }],
+                max_tokens: 100,
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                    'Content-Type': 'application/json',
+                }
+            });
 
-        const botResponse = response.data.choices[0].message.content;
-        res.json({ response: botResponse });
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({
-            response: 'Oops! Something went wrong. Let’s try that again.'
-        });
+            const botResponse = response.data.choices[0].message.content;
+            return res.json({ response: botResponse });
+        } catch (error) {
+            console.error('Error:', error);
+            return res.status(500).json({ response: 'Oops! Something went wrong. Let’s try that again.' });
+        }
     }
 });
 
-// Calendly booking endpoint
+// Calendly integration for scheduling meetings
 app.post('/schedule', async (req, res) => {
     const { name, email, date } = req.body;
 
@@ -67,7 +83,7 @@ app.post('/schedule', async (req, res) => {
         const calendlyResponse = await axios.post(
             'https://api.calendly.com/scheduled_events',
             {
-                event_type: "https://calendly.com/event_types/175480232",
+                event_type: "https://calendly.com/event_types/175480232", // Use your event type URL
                 invitees: [{
                     name: name,
                     email: email,
@@ -89,7 +105,7 @@ app.post('/schedule', async (req, res) => {
     } catch (error) {
         console.error('Calendly API error:', error);
         res.status(500).json({
-            response: 'Could not schedule the meeting. Please try again.'
+            response: 'Could not schedule the meeting. Please try again later.'
         });
     }
 });
